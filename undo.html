@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <script src="https://cdn.tiny.cloud/1/YOUR_API_KEY/tinymce/4/tinymce.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+  <!-- <script>
+    tinymce.init({
+      selector: '#myTextarea',
+      toolbar: 'undo redo',
+    });
+  </script> -->
+  <script>
+    // Custom undo function
+    let undoJSON = [];
+    let redoJSON = [];
+    let undoNode;
+    let undoIndex;
+    let undoStart;
+    let undoEnd;
+    function customRedo(e) {
+      debugger
+      if (redoJSON.length) {
+        let editor = tinymce.activeEditor;
+        let selectedElement = editor.selection.getNode();
+        let lastRedo = redoJSON[redoJSON.length - 1];
+        let targetElement = $(editor.getBody()).find('[undo_redo_id = "' + lastRedo.undo_redo_id + '"]');
+        const newRange = editor.getDoc().createRange();
+        addUndoRedohistory(e, "undo");
+        editor.dom.replace(lastRedo.undoNode[0], targetElement[0]);
+        targetElement = $(editor.getBody()).find('[undo_redo_id = "' + lastRedo.undo_redo_id + '"]')[0];
+        newRange.setStart(targetElement.childNodes[lastRedo.undoIndex].childNodes[0], lastRedo.undoStart); // Use firstChild to access the text node
+        newRange.setEnd(targetElement.childNodes[lastRedo.undoIndex].childNodes[0], lastRedo.undoEnd);
+        const newSelection = editor.selection.getSel();
+        newSelection.removeAllRanges();
+        newSelection.addRange(newRange);
+        editor.focus();
+        // undoJSON.push(redoJSON[redoJSON.length - 1]);
+        redoJSON.pop();
+      }
+    }
+
+
+    function customUndo(e) {
+      debugger
+      if (undoJSON.length) {
+        let editor = tinymce.activeEditor;
+        let selectedElement = editor.selection.getNode();
+        let lastUndo = undoJSON[undoJSON.length - 1];
+        let targetElement = $(editor.getBody()).find('[undo_redo_id = "' + lastUndo.undo_redo_id + '"]');
+        const newRange = editor.getDoc().createRange();
+        addUndoRedohistory(e, "redo");
+        editor.dom.replace(lastUndo.undoNode[0], targetElement[0]);
+        targetElement = $(editor.getBody()).find('[undo_redo_id = "' + lastUndo.undo_redo_id + '"]')[0];
+        newRange.setStart(targetElement.childNodes[lastUndo.undoIndex].childNodes[0], lastUndo.undoStart); // Use firstChild to access the text node
+        newRange.setEnd(targetElement.childNodes[lastUndo.undoIndex].childNodes[0], lastUndo.undoEnd);
+        const newSelection = editor.selection.getSel();
+        newSelection.removeAllRanges();
+        newSelection.addRange(newRange);
+        editor.focus();
+        // redoJSON.push(undoJSON[undoJSON.length - 1]);
+        undoJSON.pop();
+      }
+    }
+
+    function getChildIndex(element) {
+      let parent = element.parentElement;
+      if (!parent) {
+        return -1; // Element has no parent
+      }
+
+      // Iterate through the parent's child nodes to find the index of the element
+      for (let i = 0; i < parent.childNodes.length; i++) {
+        if (parent.childNodes[i] === element) {
+          return i;
+        }
+      }
+
+      return -1; // Element not found within its parent
+    }
+
+    function generateRandomId(prefix) {
+      return prefix + Math.random().toString(36).substring(2);
+    }
+
+    function addUndoRedohistory(e, type) {
+      try {
+        let newUndo = {};
+          let editor = tinymce.activeEditor;
+          let selectedElement = editor.selection.getNode();
+          let undo_id;
+          if ($(selectedElement.parentElement).attr("undo_redo_id")) {
+            undo_id = $(selectedElement.parentElement).attr("undo_redo_id");
+          }
+          else {
+            let randomId = generateRandomId("item_");
+            undo_id = randomId;
+            $(selectedElement.parentElement).attr("undo_redo_id", randomId);
+          }
+          let targetElement = selectedElement.parentElement; // Replace 'div' with your specific target element
+          let selection = editor.selection;
+          let range = selection.getRng();
+          let startOffset = range.startOffset;
+          let endOffset = range.endOffset;
+          let childIndex = getChildIndex(selectedElement);
+          newUndo.undoNode = $(targetElement).clone();
+          newUndo.undoIndex = childIndex;
+          newUndo.undoStart = startOffset;
+          newUndo.undoEnd = endOffset;
+          newUndo.undo_redo_id = undo_id;
+          if(type == "undo") {
+            undoJSON.push(newUndo);
+          }
+          else {
+            redoJSON.push(newUndo);
+          }
+      }
+      catch(e) {
+        console.log(e)
+      }
+    }
+
+    tinymce.init({
+      selector: '#myTextarea',
+      toolbar: 'customundo customredo | undo redo',
+      valid_elements: 'p[style],span[style],b,i,u',
+      setup: function (editor) {
+        // Register the custom undo and redo buttons and their actions
+        editor.addButton('customundo', {
+          text: 'Custom Undo',
+          icon: false,
+          onclick: customUndo,
+        });
+
+        editor.addButton('customredo', {
+          text: 'Custom Redo',
+          icon: false,
+          onclick: customRedo,
+        });
+        editor.on("keydown", function (e) {
+          addUndoRedohistory(e, "undo")
+        });
+
+        editor.on("keyup", function (e) {
+        });
+        // Customize keyboard shortcuts (optional)
+        editor.addShortcut('ctrl+z', '', function () {
+          // Define your custom action for Ctrl+Z if needed
+          debugger
+          e.preventDefault();
+          console.log('Custom Ctrl+Z action');
+        });
+
+        editor.addShortcut('ctrl+y', '', function () {
+          // Define your custom action for Ctrl+Y if needed
+          debugger
+          e.preventDefault();
+          console.log('Custom Ctrl+Y action');
+        });
+      },
+    });
+  </script>
+</head>
+
+<body>
+  <textarea id="myTextarea"><span>potential confounding<span>rayan</span><span>rayan</span> effects <span>rayan</span>of these <span>rayan</span>factors on health-related quality of life [12]. Even though several studies are conducted previously on the quality of life of people under treatment, such studies vary in terms of their effects on different dimensions of the quality of life and the associated factors [13]. Some of the studies measured the quality of life of HIV patients based on either viral load or CD4 cell count or weight of patients [14]. A cross-sectional study designs were conducted previously to assess the quality of life of people living with HIV in this regard [15, 16]. Assessing the quality of life of people living with HIV under treatment, especially at first-line regimens, is important for monitoring the impact of drugs and for the proper intervention of the program [17]. As far as the author’s knowledge is concerned, there is a scarcity of research conducted applying a generic Euro-quality(EQ)-5D three-level (EQ-5D-3L) scale which is a WHO quality of life instrument. Therefore, the main objective of the current investigation was to assess the quality of life and associated factors for the pe
+    potential confounding effects of these factors on health-related quality of life [12]. Even though several studies are conducted previously on the quality of life of people under treatment, such studies vary in terms of their effects on different dimensions of the quality of life and the associated factors [13]. Some of the studies measured the quality of life of HIV patients based on either viral load or CD4 cell count or weight of patients [14]. A cross-sectional study designs were conducted previously to assess the quality of life of people living with HIV in this regard [15, 16]. Assessing the quality of life of people living with HIV under treatment, especially at first-line regimens, is important for monitoring the impact of drugs and for the proper intervention of the program [17]. As far as the author’s knowledge is concerned, there is a scarcity of research conducted applying a generic Euro-quality(EQ)-5D three-level (EQ-5D-3L) scale which is a WHO quality of life instrument. Therefore, the main objective of the current investigation was to assess the quality of life and associated factors for the pe
+    potential confounding effects of these factors on health-related quality of life [12]. Even though several studies are conducted previously on the quality of life of people under treatment, such studies vary in terms of their effects on different dimensions of the quality of life and the associated factors [13]. Some of the studies measured the quality of life of HIV patients based on either viral load or CD4 cell count or weight of patients [14]. A cross-sectional study designs were conducted previously to assess the quality of life of people living with HIV in this regard [15, 16]. Assessing the quality of life of people living with HIV under treatment, especially at first-line regimens, is important for monitoring the impact of drugs and for the proper intervention of the program [17]. As far as the author’s knowledge is concerned, there is a scarcity of research conducted applying a generic Euro-quality(EQ)-5D three-level (EQ-5D-3L) scale which is a WHO quality of life instrument. Therefore, the main objective of the current investigation was to assess the quality of life and associated factors for the pe
+    potential confounding effects of these factors on health-related quality of life [12]. Even though several studies are conducted previously on the quality of life of people under treatment, such studies vary in terms of their effects on different dimensions of the quality of life and the associated factors [13]. Some of the studies measured the quality of life of HIV patients based on either viral load or CD4 cell count or weight of patients [14]. A cross-sectional study designs were conducted previously to assess the quality of life of people living with HIV in this regard [15, 16]. Assessing the quality of life of people living with HIV under treatment, especially at first-line regimens, is important for monitoring the impact of drugs and for the proper intervention of the program [17]. As far as the author’s knowledge is concerned, there is a scarcity of research conducted applying a generic Euro-quality(EQ)-5D three-level (EQ-5D-3L) scale which is a WHO quality of life instrument. Therefore, the main objective of the current investigation was to assess the quality of life and associated factors for the pe
+  </span></textarea>
+</body>
+
+</html>
